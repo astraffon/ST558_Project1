@@ -1,0 +1,16 @@
+[
+  {
+    "objectID": "Project1.html",
+    "href": "Project1.html",
+    "title": "ST558 Project 1",
+    "section": "",
+    "text": "The goal of this project is to write functions that will manipulate and process data from the Census Public Use Microdata Sample (PUMS) API, notably generic functions that will combine, summarize, and plot the queried data. The project will use PUMS data from 2021 through 2024.\n\nlibrary(tidyverse)\nlibrary(httr)\nlibrary(jsonlite)\nlibrary(lubridate)"
+  },
+  {
+    "objectID": "Project1.html#parsing-variable-values",
+    "href": "Project1.html#parsing-variable-values",
+    "title": "ST558 Project 1",
+    "section": "Parsing Variable Values",
+    "text": "Parsing Variable Values"
+  }
+]

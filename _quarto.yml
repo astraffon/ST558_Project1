@@ -1,0 +1,10 @@
+project:
+  type: website
+  output-dir: docs
+
+website:
+  title: "ST558 Project 1"
+
+format:
+  html:
+    toc: true

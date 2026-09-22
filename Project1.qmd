@@ -5,23 +5,26 @@ format: html
 editor: visual
 ---
 
-## Quarto
 
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+# Introduction
 
-## Running Code
-
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
-
-```{r}
-1 + 1
-```
-
-You can add options to executable code like this
+The goal of this project is to write functions that will *manipulate* and *process* 
+data from the Census Public Use Microdata Sample (PUMS) API, notably generic functions 
+that will combine, summarize, and plot the queried data. The project will use PUMS 
+data from 2021 through 2024.
 
 ```{r}
-#| echo: false
-2 * 2
+#| message: false
+#| warning: false
+
+
+#needed packages throughout project
+library(tidyverse)
+library(httr)
+library(jsonlite)
+library(lubridate)
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+# Part 1: Data Processing
+
+## Parsing Variable Values
