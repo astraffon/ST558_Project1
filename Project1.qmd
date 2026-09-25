@@ -7,16 +7,22 @@ editor: visual
 
 
 # Introduction
-
 The goal of this project is to write functions that will *manipulate* and *process* 
 data from the Census Public Use Microdata Sample (PUMS) API, notably generic functions 
 that will combine, summarize, and plot the queried data. The project will use PUMS 
 data from 2021 through 2024.
 
+# Initial Setup
+Before starting the actual project we first need to: 1) create a github repository, 
+2) set up github pages, 3) cloned the repo locally as an R project, 4) create a `.qmd` 
+file, and 5) push said changes back to github in order to create a webpage. This 
+sequence of steps largely followed what we did in Homework 1. Lastly, in the code 
+chunk below, we loaded the needed R packages to be used throughout the project. 
+
+Now we are ready to begin!
 ```{r}
 #| message: false
 #| warning: false
-
 
 #needed packages throughout project
 library(tidyverse)
@@ -28,3 +34,82 @@ library(lubridate)
 # Part 1: Data Processing
 
 ## Parsing Variable Values
+
+To download the data we will use the `GET()` function from the `httr` package to 
+query the URL for a year of interest, then we will parse the data with the `content()` 
+function and store it as an R object (list), and lastly will select variables of 
+interest. This same process will be repeated for the years 2021, 2022, 2023, and 
+2024. 
+
+```{r}
+
+# Year 2021
+# Get 2021 Census variable information
+variable_return_2021 <- GET("https://api.census.gov/data/2021/acs/acs1/pums/variables.json")
+
+# Parse JSON into an R object
+parsed_2021 <- content(variable_return_2021)
+
+# Variables needed for 2021
+variables_2021 <- c("AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP","PWGTP", "FER",
+  "HHL", "SCH", "SCHL", "SEX","ST", "REGION", "DIVISION")
+
+# Keep only the variables needed for the project
+variable_info_2021 <- parsed_2021$variables[variables_2021]
+
+# Pull the values for each variable
+variable_values_2021 <- lapply(variable_info_2021, function(x) x$values)
+
+# Year 2022
+# Get 2022 Census variable information
+variable_return_2022 <- GET("https://api.census.gov/data/2022/acs/acs1/pums/variables.json")
+
+# Parse JSON into an R object
+parsed_2022 <- content(variable_return_2022)
+
+# Variables needed for 2022
+variables_2022 <- c("AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP","PWGTP", "FER",
+  "HHL", "SCH", "SCHL", "SEX","ST", "REGION", "DIVISION")
+
+# Keep only the variables needed for the project
+variable_info_2022 <- parsed_2022$variables[variables_2022]
+
+# Pull the values for each variable
+variable_values_2022 <- lapply(variable_info_2022, function(x) x$values)
+
+# Year 2023
+# Get 2023 Census variable information
+variable_return_2023 <- GET("https://api.census.gov/data/2023/acs/acs1/pums/variables.json")
+
+# Parse JSON into an R object
+parsed_2023 <- content(variable_return_2023)
+
+# Variables needed for 2023
+variables_2023 <- c("AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP","PWGTP", "FER",
+  "HHL", "SCH", "SCHL", "SEX","STATE", "REGION", "DIVISION")
+
+# Keep only the variables needed for the project
+variable_info_2023 <- parsed_2023$variables[variables_2023]
+
+# Pull the values for each variable
+variable_values_2023 <- lapply(variable_info_2023, function(x) x$values)
+
+# Year 2024
+# Get 2024 Census variable information
+variable_return_2024 <- GET("https://api.census.gov/data/2024/acs/acs1/pums/variables.json")
+
+# Parse JSON into an R object
+parsed_2024 <- content(variable_return_2024)
+
+# Variables needed for 2024
+variables_2024 <- c("AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP","PWGTP", "FER",
+  "HHL", "SCH", "SCHL", "SEX","STATE", "REGION", "DIVISION")
+
+# Keep only the variables needed for the project
+variable_info_2024 <- parsed_2024$variables[variables_2024]
+
+# Pull the values for each variable
+variable_values_2024 <- lapply(variable_info_2024, function(x) x$values)
+
+```
+
