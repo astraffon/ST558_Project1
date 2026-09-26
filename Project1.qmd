@@ -34,12 +34,11 @@ library(lubridate)
 # Part 1: Data Processing
 
 ## Parsing Variable Values
-
 To download the data we will use the `GET()` function from the `httr` package to 
 query the URL for a year of interest, then we will parse the data with the `content()` 
 function and store it as an R object (list), and lastly will select variables of 
-interest. This same process will be repeated for the years 2021, 2022, 2023, and 
-2024. 
+interest. This process will be repeated for the years 2021, 2022, 2023, and 
+2024, with results stored in an *.rds* file.
 
 ```{r}
 
@@ -111,5 +110,212 @@ variable_info_2024 <- parsed_2024$variables[variables_2024]
 # Pull the values for each variable
 variable_values_2024 <- lapply(variable_info_2024, function(x) x$values)
 
+# Combine yearly variable-value lists into one master list
+variable_values <- list(
+  "2021" = variable_values_2021,
+  "2022" = variable_values_2022,
+  "2023" = variable_values_2023,
+  "2024" = variable_values_2024
+)
+
+# Save list as an .rds file in the data folder
+saveRDS(
+  variable_values,
+  "data/pums_variable_values.rds"
+)
+
+
+```
+## Parsing API Data
+Now we will write a function that lets a user to query the PUMS API using an API key 
+and return the results in a formatted tibble.
+
+###  Step 1: Getting the process to work with base case
+
+```{r}
+
+#key needed
+API_key <- "de74f201ac188240a9b31ef280b4980495d05d22"
+
+#base URL
+URL_2024 <- "https://api.census.gov/data/2024/acs/acs1/pums"
+
+# Query parameters wrapped in list()
+query_2024 <- list(
+  get = "AGEP,PWGTP,SEX",
+  `for` = "state:37",
+  key = API_key
+)
+
+# Query the API
+census_return_2024 <- GET(
+  URL_2024,
+  query = query_2024
+)
+
 ```
 
+### Step 2: Use a helper function to create tibble
+
+The function will do the the following, starting with the raw response:
+1) raw response : the API's returned data in machine language
+2) rawToChar(): converts machine language to human-readable JSON text
+3) fromJSON(): converts the JSON array into an R Object
+4) create a tibble
+
+But first we want to run through this process manually to create a tibble before 
+automating with a function.
+
+```{r}
+# converts returned response to readable JSON text
+json_text_2024 <- rawToChar(census_return_2024$content)
+
+# converts the JSON array into an R object
+parsed_2024 <- fromJSON(json_text_2024)
+
+# save first row as column names
+column_names <- parsed_2024[1, ]
+
+# remove first row and convert remaining data to tibble
+census_data_2024 <- as_tibble(
+  parsed_2024[-1, ]
+)
+
+# assign column names previously saved
+names(census_data_2024) <- column_names
+
+#inspect tibble
+head(census_data_2024)
+
+```
+Now we can proceed with creating the tibble with a function
+
+```{r}
+# Default settings for function f(x1,x2,x3,x4,x5) with five inputs
+census_query <- function(
+  year = 2024,
+  numerical_variables = c("AGEP", "PWGTP"),
+  categorical_variables = "SEX",
+  geography = "State",
+  geography_value = NULL
+) { # now we add the body of function in between these curly brackets
+  
+  # check that only one year was entered
+  if (length(year) != 1) {
+    stop("Only one year can be entered.")
+  }
+  
+  # valid years
+  valid_years <- c(2021, 2022, 2023, 2024)
+  
+  # check that year is valid
+  if (!(year %in% valid_years)) {
+    stop("Year must be 2021, 2022, 2023, or 2024.")
+  }
+  
+  # valid numerical variables
+  valid_numerical_variables <- c(
+    "AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP", "PWGTP"
+  )
+  
+  # check that only valid numerical variables were entered
+  if (!all(numerical_variables %in% valid_numerical_variables)) {
+    stop("Invalid numerical variable entered.")
+  }
+  
+  # check that PWGTP was included
+  if (!("PWGTP" %in% numerical_variables)) {
+    stop("PWGTP must be included.")
+  }
+  
+  # check that at least one numerical variable besides PWGTP was included
+  if (length(setdiff(numerical_variables, "PWGTP")) < 1) {
+    stop("At least one numerical variable other than PWGTP must be included.")
+  }
+  
+  # valid categorical variables
+  valid_categorical_variables <- c(
+    "FER", "HHL", "SCH", "SCHL", "SEX"
+  )
+  
+  # check that at least one categorical variable was entered
+  if (length(categorical_variables) < 1) {
+    stop("At least one categorical variable must be included.")
+  }
+  
+  # check that only valid categorical variables were entered
+  if (!all(categorical_variables %in% valid_categorical_variables)) {
+    stop("Invalid categorical variable entered.")
+  }
+  
+  # valid geography levels
+  valid_geographies <- c("Region", "Division", "State")
+  
+  # check that only one geography level was entered
+  if (length(geography) != 1) {
+    stop("Only one geography level can be entered.")
+  }
+  
+  # check that geography level is valid
+  if (!(geography %in% valid_geographies)) {
+    stop("Geography must be Region, Division, or State.")
+  }
+  
+  # determine which geography variable to use
+  if (geography == "State") {
+    
+    # state variable changed names after 2022
+    if (year %in% c(2021, 2022)) {
+      geography_variable <- "ST"
+    } else {
+      geography_variable <- "STATE"
+    }
+    
+  } else if (geography == "Region") {
+    
+    geography_variable <- "REGION"
+    
+  } else if (geography == "Division") {
+    
+    geography_variable <- "DIVISION"
+  }
+  
+  # pull allowable geography values from saved variable information
+  geography_values <-
+    variable_values[[as.character(year)]][[geography_variable]][["item"]]
+  
+  # Census geography codes are stored as the names
+  valid_geography_values <- names(geography_values)
+  
+  # assign a default geography value if none was entered
+  if (is.null(geography_value)) {
+    
+    if (geography == "State") {
+      geography_value <- "37"
+    } else if (geography == "Region") {
+      geography_value <- "3"
+    } else if (geography == "Division") {
+      geography_value <- "5"
+    }
+  }
+  
+  # convert geography value to character
+  geography_value <- as.character(geography_value)
+  
+  # check that only one geography value was entered
+  if (length(geography_value) != 1) {
+    stop("Only one geography value can be entered.")
+  }
+  
+  # check that geography value is valid or is "all"
+  if (!(geography_value %in% valid_geography_values) &&
+      !(tolower(geography_value) == "all")) {
+    stop("Invalid geography value entered.")
+  }
+  
+  # temporary test
+  geography_value
+}
+
+census_query()
+```
