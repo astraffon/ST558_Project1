@@ -34,11 +34,12 @@ library(lubridate)
 # Part 1: Data Processing
 
 ## Parsing Variable Values
-To download the data we will use the `GET()` function from the `httr` package to 
-query the URL for a year of interest, then we will parse the data with the `content()` 
-function and store it as an R object (list), and lastly will select variables of 
-interest. This process will be repeated for the years 2021, 2022, 2023, and 
-2024, with results stored in an *.rds* file.
+
+### Step 1: Manual setup
+First we will manually query the URL and download the data for a single year (2021) 
+using the `GET()` function from the `httr` package, then we will parse the data with 
+the `content()` function and store it as an R object (list), and lastly will select 
+variables of interest. 
 
 ```{r}
 
@@ -58,57 +59,65 @@ variable_info_2021 <- parsed_2021$variables[variables_2021]
 
 # Pull the values for each variable
 variable_values_2021 <- lapply(variable_info_2021, function(x) x$values)
+```
 
-# Year 2022
-# Get 2022 Census variable information
-variable_return_2022 <- GET("https://api.census.gov/data/2022/acs/acs1/pums/variables.json")
+### Step 2: Writing a function to call any year
+Next, we write a function that repeats the above process for any given year.
+```{r}
+# function to get variable values for one year
+get_variable_values <- function(year) {
+  
+  # create URL for selected year
+  variable_URL <- paste0(
+    "https://api.census.gov/data/",
+    year,
+    "/acs/acs1/pums/variables.json"
+  )
+  
+  # get Census variable information
+  variable_return <- GET(variable_URL)
+  
+  # parse JSON into an R object
+  parsed_variables <- content(variable_return)
+  
+  # variables needed depend on year because ST changes to STATE
+  if (year %in% c(2021, 2022)) {
+    
+    variables_needed <- c(
+      "AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP", "PWGTP",
+      "FER", "HHL", "SCH", "SCHL", "SEX", "ST", "REGION", "DIVISION"
+    )
+    
+  } else {
+    
+    variables_needed <- c(
+      "AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP", "PWGTP",
+      "FER", "HHL", "SCH", "SCHL", "SEX", "STATE", "REGION", "DIVISION"
+    )
+  }
+  
+  # keep only the variables needed for the project
+  variable_info <- parsed_variables$variables[variables_needed]
+  
+  # pull the values for each variable
+  variable_values <- lapply(
+    variable_info,
+    function(x) x$values
+  )
+  
+  variable_values
+}
+```
 
-# Parse JSON into an R object
-parsed_2022 <- content(variable_return_2022)
+### Step 3: Call function for years of interest
+Now we proceed to run it for 2021, 2022, 2023, and 2024, with results stored in a *.rds* 
+file.
+```{r}
 
-# Variables needed for 2022
-variables_2022 <- c("AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP","PWGTP", "FER",
-  "HHL", "SCH", "SCHL", "SEX","ST", "REGION", "DIVISION")
-
-# Keep only the variables needed for the project
-variable_info_2022 <- parsed_2022$variables[variables_2022]
-
-# Pull the values for each variable
-variable_values_2022 <- lapply(variable_info_2022, function(x) x$values)
-
-# Year 2023
-# Get 2023 Census variable information
-variable_return_2023 <- GET("https://api.census.gov/data/2023/acs/acs1/pums/variables.json")
-
-# Parse JSON into an R object
-parsed_2023 <- content(variable_return_2023)
-
-# Variables needed for 2023
-variables_2023 <- c("AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP","PWGTP", "FER",
-  "HHL", "SCH", "SCHL", "SEX","STATE", "REGION", "DIVISION")
-
-# Keep only the variables needed for the project
-variable_info_2023 <- parsed_2023$variables[variables_2023]
-
-# Pull the values for each variable
-variable_values_2023 <- lapply(variable_info_2023, function(x) x$values)
-
-# Year 2024
-# Get 2024 Census variable information
-variable_return_2024 <- GET("https://api.census.gov/data/2024/acs/acs1/pums/variables.json")
-
-# Parse JSON into an R object
-parsed_2024 <- content(variable_return_2024)
-
-# Variables needed for 2024
-variables_2024 <- c("AGEP", "GASP", "GRPIP", "JWAP", "JWDP", "JWMNP","PWGTP", "FER",
-  "HHL", "SCH", "SCHL", "SEX","STATE", "REGION", "DIVISION")
-
-# Keep only the variables needed for the project
-variable_info_2024 <- parsed_2024$variables[variables_2024]
-
-# Pull the values for each variable
-variable_values_2024 <- lapply(variable_info_2024, function(x) x$values)
+variable_values_2021 <- get_variable_values(2021)
+variable_values_2022 <- get_variable_values(2022)
+variable_values_2023 <- get_variable_values(2023)
+variable_values_2024 <- get_variable_values(2024)
 
 # Combine yearly variable-value lists into one master list
 variable_values <- list(
@@ -124,8 +133,11 @@ saveRDS(
   "data/pums_variable_values.rds"
 )
 
+# read saved variable information
+variable_values <- readRDS("data/pums_variable_values.rds")
 
 ```
+
 ## Parsing API Data
 Now we will write a function that lets a user to query the PUMS API using an API key 
 and return the results in a formatted tibble.
@@ -164,7 +176,8 @@ The function will do the the following, starting with the raw response:
 4) create a tibble
 
 But first we want to run through this process manually to create a tibble before 
-automating with a function.
+automating with a function. This helps illustrate the steps that will be embedded 
+in the *helper* function. 
 
 ```{r}
 # converts returned response to readable JSON text
@@ -188,7 +201,46 @@ names(census_data_2024) <- column_names
 head(census_data_2024)
 
 ```
-Now we can proceed with creating the tibble with a function
+
+Now we can proceed with creating the helper function to automate this process.
+```{r}
+# helper function to convert API response into a tibble
+census_tibble <- function(api_return) {
+  
+  # convert returned response into an R object
+  parsed_data <- fromJSON(
+    rawToChar(api_return$content)
+  )
+  
+  # save first row as column names
+  column_names <- parsed_data[1, ]
+  
+  # remove first row and convert remaining data to tibble
+  census_data <- as_tibble(
+    parsed_data[-1, ]
+  )
+  
+  # assign column names previously saved
+  names(census_data) <- column_names
+  
+  # return tibble
+  census_data
+}
+
+# test helper function
+census_data_test <- census_tibble(census_return_2024)
+
+# inspect tibble
+head(census_data_test)
+
+```
+
+### Step 3: Write main API Function
+Next we *wrap* the helper function into a main function that parses the data, 
+but that will also allow users to change the survey year, numerical variables, 
+categorical variables, geography level, and geography value, as long as the 
+selected inputs are valid.
+
 
 ```{r}
 # Default settings for function f(x1,x2,x3,x4,x5) with five inputs
@@ -313,8 +365,112 @@ census_query <- function(
     stop("Invalid geography value entered.")
   }
   
-  # temporary test
-  geography_value
+  # build API URL
+  API_URL <- paste0("https://api.census.gov/data/", year, "/acs/acs1/pums")
+
+  # build query parameters
+  # combine numerical and categorical variables
+  variables_to_get <- c(
+    numerical_variables,
+    categorical_variables
+  )
+
+  # convert variable names to comma-separated format for API
+  get_variables <- paste(
+    variables_to_get,
+    collapse = ","
+  )
+
+  # use * if user selected all geography values
+  if (tolower(geography_value) == "all") {
+    geography_query_value <- "*"
+  } else {
+    geography_query_value <- geography_value
+  }
+
+  # build geography portion of query
+  geography_query <- paste0(
+    tolower(geography),
+    ":",
+    geography_query_value
+  )
+
+  # build query parameters
+  query_parameters <- list(
+    get = get_variables,
+    `for` = geography_query,
+    key = API_key
+  )
+  
+  # run GET()
+  api_return <- GET(
+    API_URL,
+    query = query_parameters
+  )
+  
+  # convert API response to tibble
+  census_data <- census_tibble(api_return)
+  
+  # convert variable types
+
+  # 1) ordinary numerical variables
+
+  # identify time variables
+  time_variables <- c("JWAP", "JWDP")
+
+  # numerical variables other than time variables
+  regular_numerical_variables <- setdiff(
+    numerical_variables,
+    time_variables
+  )
+
+  # convert regular numerical variables to numeric
+  for (variable in regular_numerical_variables) {
+    census_data[[variable]] <- as.numeric(census_data[[variable]])
+  }
+
+  # 2) time variables
+
+  # identify selected time variables
+  selected_time_variables <- intersect(
+    numerical_variables,
+    time_variables
+  )
+
+  # convert selected time variables to midpoint times
+  for (variable in selected_time_variables) {
+  
+    census_data[[variable]] <- hms::as_hms(
+      sapply(
+        census_data[[variable]],
+        time_midpoint,
+        year = year,
+        variable = variable
+      )
+    )
+  }
+
+  # 3) categorical variables
+
+  for (variable in categorical_variables) {
+  
+    # pull category values from saved variable information
+    category_values <-
+      variable_values[[as.character(year)]][[variable]][["item"]]
+  
+    # convert categorical variable to factor
+    census_data[[variable]] <- factor(
+      census_data[[variable]],
+      levels = names(category_values),
+      labels = unlist(category_values)
+    )
+  }
+
+  # add census class
+  class(census_data) <- c("census", class(census_data))
+
+  # return tibble
+  census_data
 }
 
 census_query()
