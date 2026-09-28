@@ -561,14 +561,6 @@ head(census_years_test)
 str(census_years_test)
 class(census_years_test)
 
-unique(census_years_test$year)
-
-write.csv(
-  head(census_years_test, 10000),
-  "census_years_test_sample.csv",
-  row.names = FALSE
-
-)
 ```
 # Part 2: Writing Generic Functions
 
