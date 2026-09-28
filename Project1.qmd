@@ -8,13 +8,42 @@ editor: visual
 
 # Introduction
 The goal of this project is to write functions that will *manipulate* and *process* 
-data from the Census Public Use Microdata Sample (PUMS) API, notably generic functions 
+data from the [Census Public Use Microdata Sample (PUMS) API](https://www.census.gov/data/developers/data-sets/census-microdata-api.html), notably generic functions 
 that will combine, summarize, and plot the queried data. The project will use PUMS 
 data from 2021 through 2024.
 
+The PUMS data contains person and household level characteristics for records returned 
+by the Census API. Each row represents a sampled record, but the rows do not all carry 
+the same population weight. The PWGTP variable indicates how many people in the population 
+are represented by each record, which becomes important when summarizing the data.
+
+The variables used in this project include numerical, categorical, time, and geography 
+variables. The table below provides a brief description of each variable and the units 
+or type of information it contains.
+
+| Variable | Description | Type / Units |
+|:---------|:------------|:-------------|
+| AGEP | Age | Numerical - years |
+| GASP | Monthly gas cost | Numerical - dollars per month |
+| GRPIP | Gross rent as a percentage of household income | Numerical - percent |
+| JWMNP | Travel time to work | Numerical - minutes |
+| PWGTP | Person weight; number of people represented by the record | Numerical - population weight |
+| JWAP | Time of arrival at work | Time |
+| JWDP | Time of departure for work | Time |
+| FER | Gave birth to a child within the past 12 months | Categorical |
+| HHL | Household language | Categorical |
+| SCH | School enrollment | Categorical |
+| SCHL | Educational attainment | Categorical |
+| SEX | Sex | Categorical |
+| ST / STATE | State code (`ST` in 2021-2022 and `STATE` in 2023-2024) | Geography |
+| REGION | Census region | Geography |
+| DIVISION | Census division | Geography |
+| year | Survey year added when combining multiple years | Categorical in our summaries |
+
+
 # Initial Setup
 Before starting the actual project we first need to: 1) create a github repository, 
-2) set up github pages, 3) cloned the repo locally as an R project, 4) create a `.qmd` 
+2) set up github pages, 3) clone the repo locally as an R project, 4) create a `.qmd` 
 file, and 5) push said changes back to github in order to create a webpage. This 
 sequence of steps largely followed what we did in Homework 1. Lastly, in the code 
 chunk below, we loaded the needed R packages to be used throughout the project. 
@@ -475,3 +504,219 @@ census_query <- function(
 
 census_query()
 ```
+
+
+## Combining Years
+Next, we write a function that allows the user to query multiple years of Census data. 
+This function will use the single-year `census_query()` function created above for each 
+selected year and then combine the results into one tibble. We use `lapply()` to take 
+each year and apply the single-year function.
+
+```{r}
+# function to combine Census data from multiple years...note `years' is plural
+census_query_years <- function(
+  years,
+  numerical_variables = c("AGEP", "PWGTP"),
+  categorical_variables = "SEX",
+  geography = "State",
+  geography_value = NULL
+) {
+  
+  # query Census data for each selected year
+  yearly_data <- lapply(
+    years,
+    function(current_year) {
+      
+      census_data <- census_query(
+        year = current_year,
+        numerical_variables = numerical_variables,
+        categorical_variables = categorical_variables,
+        geography = geography,
+        geography_value = geography_value
+      )
+      
+      # add year variable
+      census_data$year <- current_year
+      
+      # return data for current year
+      census_data
+    }
+  )
+  
+  # combine all years into one tibble
+  combined_data <- bind_rows(yearly_data)
+  
+  # make sure census class is included only once
+  class(combined_data) <- unique(c("census", class(combined_data)))
+  
+  # return combined tibble
+  combined_data
+}
+
+# test combining two years
+census_years_test <- census_query_years(years = c(2023, 2024))
+
+# inspect results
+head(census_years_test)
+str(census_years_test)
+class(census_years_test)
+
+unique(census_years_test$year)
+
+write.csv(
+  head(census_years_test, 10000),
+  "census_years_test_sample.csv",
+  row.names = FALSE
+
+)
+```
+# Part 2: Writing Generic Functions
+
+## Numeric and Categorical Summaries
+
+Now that we have functions that return Census data for one or multiple years, we
+can create a custom `summary()` function for objects with the `"census"` class.
+This function will calculate weighted summaries for numerical variables and counts
+for categorical variables.
+```{r}
+# custom summary function for census class
+summary.census <- function(
+  object,
+  numerical_variables = NULL,
+  categorical_variables = NULL
+) {
+  
+  # identify time variables to exclude from numerical summaries
+  time_variables <- c("JWAP", "JWDP")
+  
+  # if numerical variables are not specified, use all numeric variables
+  if (is.null(numerical_variables)) {
+    
+    numerical_variables <- names(object)[
+      sapply(object, is.numeric)
+    ]
+    
+    # remove variables that should not receive numerical summaries
+    numerical_variables <- setdiff(
+      numerical_variables,
+      c("PWGTP", "year", time_variables)
+    )
+  }
+  
+  # if categorical variables are not specified, use factor and character variables
+  if (is.null(categorical_variables)) {
+    
+    categorical_variables <- names(object)[
+      sapply(
+        object,
+        function(x) is.factor(x) || is.character(x)
+      )
+    ]
+    
+    # treat year as a categorical variable
+    if ("year" %in% names(object)) {
+      categorical_variables <- c(categorical_variables, "year")
+    }
+  }
+  
+  # create an empty list to store summary results
+  summary_results <- list()
+  
+  # calculate weighted summaries for numerical variables
+  for (variable in numerical_variables) {
+    
+    # pull numerical values and population weights
+    numeric_values <- object[[variable]]
+    weight_values <- object$PWGTP
+    
+    # keep rows without missing values
+    valid_rows <- !is.na(numeric_values) & !is.na(weight_values)
+    
+    numeric_values <- numeric_values[valid_rows]
+    weight_values <- weight_values[valid_rows]
+    
+    # calculate weighted mean
+    weighted_mean <- sum(
+      numeric_values * weight_values
+    ) / sum(weight_values)
+    
+    # calculate weighted standard deviation
+    weighted_sd <- sqrt(
+      sum(numeric_values^2 * weight_values) / sum(weight_values) -
+        weighted_mean^2
+    )
+    
+    # save results for this variable
+    summary_results[[variable]] <- c(
+      mean = weighted_mean,
+      sd = weighted_sd
+    )
+  }
+  
+  # calculate weighted counts for categorical variables
+  for (variable in categorical_variables) {
+    
+    # pull categorical values and population weights
+    category_values <- object[[variable]]
+    weight_values <- object$PWGTP
+    
+    # keep rows without missing values
+    valid_rows <- !is.na(category_values) & !is.na(weight_values)
+    
+    category_values <- category_values[valid_rows]
+    weight_values <- weight_values[valid_rows]
+    
+    # calculate weighted counts for each category
+    weighted_counts <- tapply(
+      weight_values,
+      category_values,
+      sum
+    )
+    
+    # save counts for this variable
+    summary_results[[variable]] <- weighted_counts
+  }
+  
+  # return named list of summary results
+  summary_results
+}
+
+summary(census_years_test)
+```
+## Graphical Summaries
+Next, we create a custom plot() function for Census objects. The function will allow 
+the user to specify one categorical variable and one numerical variable, and will 
+create a weighted boxplot using `PWGTP`.
+```{r}
+# custom plot function for census class
+plot.census <- function(
+  x,
+  cat_var,
+  num_var,
+  ...
+) {
+  
+  # create weighted boxplot
+  ggplot(
+    x,
+    aes(
+      x = factor(get(cat_var)),
+      y = get(num_var),
+      weight = PWGTP
+    )
+  ) +
+    geom_boxplot() +
+    labs(
+      x = cat_var,
+      y = num_var,
+      title = paste(num_var, "by", cat_var)
+    )
+}
+
+plot(
+  census_years_test,
+  cat_var = "year",
+  num_var = "AGEP"
+)
+```
+

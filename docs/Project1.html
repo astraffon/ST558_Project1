@@ -147,11 +147,109 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="introduction" class="level1">
 <h1>Introduction</h1>
-<p>The goal of this project is to write functions that will <em>manipulate</em> and <em>process</em> data from the Census Public Use Microdata Sample (PUMS) API, notably generic functions that will combine, summarize, and plot the queried data. The project will use PUMS data from 2021 through 2024.</p>
+<p>The goal of this project is to write functions that will <em>manipulate</em> and <em>process</em> data from the <a href="https://www.census.gov/data/developers/data-sets/census-microdata-api.html">Census Public Use Microdata Sample (PUMS) API</a>, notably generic functions that will combine, summarize, and plot the queried data. The project will use PUMS data from 2021 through 2024.</p>
+<p>The PUMS data contains person and household level characteristics for records returned by the Census API. Each row represents a sampled record, but the rows do not all carry the same population weight. The PWGTP variable indicates how many people in the population are represented by each record, which becomes important when summarizing the data.</p>
+<p>The variables used in this project include numerical, categorical, time, and geography variables. The table below provides a brief description of each variable and the units or type of information it contains.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 27%">
+<col style="width: 35%">
+<col style="width: 37%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Variable</th>
+<th style="text-align: left;">Description</th>
+<th style="text-align: left;">Type / Units</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">AGEP</td>
+<td style="text-align: left;">Age</td>
+<td style="text-align: left;">Numerical - years</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">GASP</td>
+<td style="text-align: left;">Monthly gas cost</td>
+<td style="text-align: left;">Numerical - dollars per month</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">GRPIP</td>
+<td style="text-align: left;">Gross rent as a percentage of household income</td>
+<td style="text-align: left;">Numerical - percent</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">JWMNP</td>
+<td style="text-align: left;">Travel time to work</td>
+<td style="text-align: left;">Numerical - minutes</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">PWGTP</td>
+<td style="text-align: left;">Person weight; number of people represented by the record</td>
+<td style="text-align: left;">Numerical - population weight</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">JWAP</td>
+<td style="text-align: left;">Time of arrival at work</td>
+<td style="text-align: left;">Time</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">JWDP</td>
+<td style="text-align: left;">Time of departure for work</td>
+<td style="text-align: left;">Time</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">FER</td>
+<td style="text-align: left;">Gave birth to a child within the past 12 months</td>
+<td style="text-align: left;">Categorical</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">HHL</td>
+<td style="text-align: left;">Household language</td>
+<td style="text-align: left;">Categorical</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">SCH</td>
+<td style="text-align: left;">School enrollment</td>
+<td style="text-align: left;">Categorical</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">SCHL</td>
+<td style="text-align: left;">Educational attainment</td>
+<td style="text-align: left;">Categorical</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">SEX</td>
+<td style="text-align: left;">Sex</td>
+<td style="text-align: left;">Categorical</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">ST / STATE</td>
+<td style="text-align: left;">State code (<code>ST</code> in 2021-2022 and <code>STATE</code> in 2023-2024)</td>
+<td style="text-align: left;">Geography</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">REGION</td>
+<td style="text-align: left;">Census region</td>
+<td style="text-align: left;">Geography</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">DIVISION</td>
+<td style="text-align: left;">Census division</td>
+<td style="text-align: left;">Geography</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">year</td>
+<td style="text-align: left;">Survey year added when combining multiple years</td>
+<td style="text-align: left;">Categorical in our summaries</td>
+</tr>
+</tbody>
+</table>
 </section>
 <section id="initial-setup" class="level1">
 <h1>Initial Setup</h1>
-<p>Before starting the actual project we first need to: 1) create a github repository, 2) set up github pages, 3) cloned the repo locally as an R project, 4) create a <code>.qmd</code> file, and 5) push said changes back to github in order to create a webpage. This sequence of steps largely followed what we did in Homework 1. Lastly, in the code chunk below, we loaded the needed R packages to be used throughout the project.</p>
+<p>Before starting the actual project we first need to: 1) create a github repository, 2) set up github pages, 3) clone the repo locally as an R project, 4) create a <code>.qmd</code> file, and 5) push said changes back to github in order to create a webpage. This sequence of steps largely followed what we did in Homework 1. Lastly, in the code chunk below, we loaded the needed R packages to be used throughout the project.</p>
 <p>Now we are ready to begin!</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">#needed packages throughout project</span></span>
@@ -625,9 +723,266 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 # ℹ 114,260 more rows</code></pre>
 </div>
 </div>
-
-
 </section>
+</section>
+<section id="combining-years" class="level2">
+<h2 class="anchored" data-anchor-id="combining-years">Combining Years</h2>
+<p>Next, we write a function that allows the user to query multiple years of Census data. This function will use the single-year <code>census_query()</code> function created above for each selected year and then combine the results into one tibble. We use <code>lapply()</code> to take each year and apply the single-year function.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># function to combine Census data from multiple years...note `years' is plural</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>census_query_years <span class="ot">&lt;-</span> <span class="cf">function</span>(</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  years,</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">numerical_variables =</span> <span class="fu">c</span>(<span class="st">"AGEP"</span>, <span class="st">"PWGTP"</span>),</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">categorical_variables =</span> <span class="st">"SEX"</span>,</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">geography =</span> <span class="st">"State"</span>,</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">geography_value =</span> <span class="cn">NULL</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>) {</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>  <span class="co"># query Census data for each selected year</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>  yearly_data <span class="ot">&lt;-</span> <span class="fu">lapply</span>(</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    years,</span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">function</span>(current_year) {</span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>      </span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>      census_data <span class="ot">&lt;-</span> <span class="fu">census_query</span>(</span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>        <span class="at">year =</span> current_year,</span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>        <span class="at">numerical_variables =</span> numerical_variables,</span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>        <span class="at">categorical_variables =</span> categorical_variables,</span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>        <span class="at">geography =</span> geography,</span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>        <span class="at">geography_value =</span> geography_value</span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>      </span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>      <span class="co"># add year variable</span></span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>      census_data<span class="sc">$</span>year <span class="ot">&lt;-</span> current_year</span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a>      </span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a>      <span class="co"># return data for current year</span></span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a>      census_data</span>
+<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb14-30"><a href="#cb14-30" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb14-31"><a href="#cb14-31" aria-hidden="true" tabindex="-1"></a>  <span class="co"># combine all years into one tibble</span></span>
+<span id="cb14-32"><a href="#cb14-32" aria-hidden="true" tabindex="-1"></a>  combined_data <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(yearly_data)</span>
+<span id="cb14-33"><a href="#cb14-33" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb14-34"><a href="#cb14-34" aria-hidden="true" tabindex="-1"></a>  <span class="co"># make sure census class is included only once</span></span>
+<span id="cb14-35"><a href="#cb14-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">class</span>(combined_data) <span class="ot">&lt;-</span> <span class="fu">unique</span>(<span class="fu">c</span>(<span class="st">"census"</span>, <span class="fu">class</span>(combined_data)))</span>
+<span id="cb14-36"><a href="#cb14-36" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb14-37"><a href="#cb14-37" aria-hidden="true" tabindex="-1"></a>  <span class="co"># return combined tibble</span></span>
+<span id="cb14-38"><a href="#cb14-38" aria-hidden="true" tabindex="-1"></a>  combined_data</span>
+<span id="cb14-39"><a href="#cb14-39" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb14-40"><a href="#cb14-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-41"><a href="#cb14-41" aria-hidden="true" tabindex="-1"></a><span class="co"># test combining two years</span></span>
+<span id="cb14-42"><a href="#cb14-42" aria-hidden="true" tabindex="-1"></a>census_years_test <span class="ot">&lt;-</span> <span class="fu">census_query_years</span>(<span class="at">years =</span> <span class="fu">c</span>(<span class="dv">2023</span>, <span class="dv">2024</span>))</span>
+<span id="cb14-43"><a href="#cb14-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-44"><a href="#cb14-44" aria-hidden="true" tabindex="-1"></a><span class="co"># inspect results</span></span>
+<span id="cb14-45"><a href="#cb14-45" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(census_years_test)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 6 × 5
+   AGEP PWGTP SEX    state  year
+  &lt;dbl&gt; &lt;dbl&gt; &lt;fct&gt;  &lt;chr&gt; &lt;dbl&gt;
+1    18    62 Female 37     2023
+2    93    94 Female 37     2023
+3    22    73 Male   37     2023
+4    39    63 Male   37     2023
+5    19    50 Male   37     2023
+6    39    41 Male   37     2023</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(census_years_test)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>census [226,190 × 5] (S3: census/tbl_df/tbl/data.frame)
+ $ AGEP : num [1:226190] 18 93 22 39 19 39 26 19 34 19 ...
+ $ PWGTP: num [1:226190] 62 94 73 63 50 41 16 10 53 7 ...
+ $ SEX  : Factor w/ 2 levels "Male","Female": 2 2 1 1 1 1 2 1 1 2 ...
+ $ state: chr [1:226190] "37" "37" "37" "37" ...
+ $ year : num [1:226190] 2023 2023 2023 2023 2023 ...</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">class</span>(census_years_test)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "census"     "tbl_df"     "tbl"        "data.frame"</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">unique</span>(census_years_test<span class="sc">$</span>year)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 2023 2024</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write.csv</span>(</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">head</span>(census_years_test, <span class="dv">10000</span>),</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">"census_years_test_sample.csv"</span>,</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">row.names =</span> <span class="cn">FALSE</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+</section>
+<section id="part-2-writing-generic-functions" class="level1">
+<h1>Part 2: Writing Generic Functions</h1>
+<section id="numeric-and-categorical-summaries" class="level2">
+<h2 class="anchored" data-anchor-id="numeric-and-categorical-summaries">Numeric and Categorical Summaries</h2>
+<p>Now that we have functions that return Census data for one or multiple years, we can create a custom <code>summary()</code> function for objects with the <code>"census"</code> class. This function will calculate weighted summaries for numerical variables and counts for categorical variables.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># custom summary function for census class</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>summary.census <span class="ot">&lt;-</span> <span class="cf">function</span>(</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  object,</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">numerical_variables =</span> <span class="cn">NULL</span>,</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">categorical_variables =</span> <span class="cn">NULL</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>) {</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>  <span class="co"># identify time variables to exclude from numerical summaries</span></span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>  time_variables <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"JWAP"</span>, <span class="st">"JWDP"</span>)</span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>  <span class="co"># if numerical variables are not specified, use all numeric variables</span></span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.null</span>(numerical_variables)) {</span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>    numerical_variables <span class="ot">&lt;-</span> <span class="fu">names</span>(object)[</span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>      <span class="fu">sapply</span>(object, is.numeric)</span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a>    ]</span>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a>    <span class="co"># remove variables that should not receive numerical summaries</span></span>
+<span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a>    numerical_variables <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(</span>
+<span id="cb23-20"><a href="#cb23-20" aria-hidden="true" tabindex="-1"></a>      numerical_variables,</span>
+<span id="cb23-21"><a href="#cb23-21" aria-hidden="true" tabindex="-1"></a>      <span class="fu">c</span>(<span class="st">"PWGTP"</span>, <span class="st">"year"</span>, time_variables)</span>
+<span id="cb23-22"><a href="#cb23-22" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb23-23"><a href="#cb23-23" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb23-24"><a href="#cb23-24" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb23-25"><a href="#cb23-25" aria-hidden="true" tabindex="-1"></a>  <span class="co"># if categorical variables are not specified, use factor and character variables</span></span>
+<span id="cb23-26"><a href="#cb23-26" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.null</span>(categorical_variables)) {</span>
+<span id="cb23-27"><a href="#cb23-27" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb23-28"><a href="#cb23-28" aria-hidden="true" tabindex="-1"></a>    categorical_variables <span class="ot">&lt;-</span> <span class="fu">names</span>(object)[</span>
+<span id="cb23-29"><a href="#cb23-29" aria-hidden="true" tabindex="-1"></a>      <span class="fu">sapply</span>(</span>
+<span id="cb23-30"><a href="#cb23-30" aria-hidden="true" tabindex="-1"></a>        object,</span>
+<span id="cb23-31"><a href="#cb23-31" aria-hidden="true" tabindex="-1"></a>        <span class="cf">function</span>(x) <span class="fu">is.factor</span>(x) <span class="sc">||</span> <span class="fu">is.character</span>(x)</span>
+<span id="cb23-32"><a href="#cb23-32" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb23-33"><a href="#cb23-33" aria-hidden="true" tabindex="-1"></a>    ]</span>
+<span id="cb23-34"><a href="#cb23-34" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb23-35"><a href="#cb23-35" aria-hidden="true" tabindex="-1"></a>    <span class="co"># treat year as a categorical variable</span></span>
+<span id="cb23-36"><a href="#cb23-36" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="st">"year"</span> <span class="sc">%in%</span> <span class="fu">names</span>(object)) {</span>
+<span id="cb23-37"><a href="#cb23-37" aria-hidden="true" tabindex="-1"></a>      categorical_variables <span class="ot">&lt;-</span> <span class="fu">c</span>(categorical_variables, <span class="st">"year"</span>)</span>
+<span id="cb23-38"><a href="#cb23-38" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb23-39"><a href="#cb23-39" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb23-40"><a href="#cb23-40" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb23-41"><a href="#cb23-41" aria-hidden="true" tabindex="-1"></a>  <span class="co"># create an empty list to store summary results</span></span>
+<span id="cb23-42"><a href="#cb23-42" aria-hidden="true" tabindex="-1"></a>  summary_results <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb23-43"><a href="#cb23-43" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb23-44"><a href="#cb23-44" aria-hidden="true" tabindex="-1"></a>  <span class="co"># calculate weighted summaries for numerical variables</span></span>
+<span id="cb23-45"><a href="#cb23-45" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (variable <span class="cf">in</span> numerical_variables) {</span>
+<span id="cb23-46"><a href="#cb23-46" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb23-47"><a href="#cb23-47" aria-hidden="true" tabindex="-1"></a>    <span class="co"># pull numerical values and population weights</span></span>
+<span id="cb23-48"><a href="#cb23-48" aria-hidden="true" tabindex="-1"></a>    numeric_values <span class="ot">&lt;-</span> object[[variable]]</span>
+<span id="cb23-49"><a href="#cb23-49" aria-hidden="true" tabindex="-1"></a>    weight_values <span class="ot">&lt;-</span> object<span class="sc">$</span>PWGTP</span>
+<span id="cb23-50"><a href="#cb23-50" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb23-51"><a href="#cb23-51" aria-hidden="true" tabindex="-1"></a>    <span class="co"># keep rows without missing values</span></span>
+<span id="cb23-52"><a href="#cb23-52" aria-hidden="true" tabindex="-1"></a>    valid_rows <span class="ot">&lt;-</span> <span class="sc">!</span><span class="fu">is.na</span>(numeric_values) <span class="sc">&amp;</span> <span class="sc">!</span><span class="fu">is.na</span>(weight_values)</span>
+<span id="cb23-53"><a href="#cb23-53" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb23-54"><a href="#cb23-54" aria-hidden="true" tabindex="-1"></a>    numeric_values <span class="ot">&lt;-</span> numeric_values[valid_rows]</span>
+<span id="cb23-55"><a href="#cb23-55" aria-hidden="true" tabindex="-1"></a>    weight_values <span class="ot">&lt;-</span> weight_values[valid_rows]</span>
+<span id="cb23-56"><a href="#cb23-56" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb23-57"><a href="#cb23-57" aria-hidden="true" tabindex="-1"></a>    <span class="co"># calculate weighted mean</span></span>
+<span id="cb23-58"><a href="#cb23-58" aria-hidden="true" tabindex="-1"></a>    weighted_mean <span class="ot">&lt;-</span> <span class="fu">sum</span>(</span>
+<span id="cb23-59"><a href="#cb23-59" aria-hidden="true" tabindex="-1"></a>      numeric_values <span class="sc">*</span> weight_values</span>
+<span id="cb23-60"><a href="#cb23-60" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">/</span> <span class="fu">sum</span>(weight_values)</span>
+<span id="cb23-61"><a href="#cb23-61" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb23-62"><a href="#cb23-62" aria-hidden="true" tabindex="-1"></a>    <span class="co"># calculate weighted standard deviation</span></span>
+<span id="cb23-63"><a href="#cb23-63" aria-hidden="true" tabindex="-1"></a>    weighted_sd <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(</span>
+<span id="cb23-64"><a href="#cb23-64" aria-hidden="true" tabindex="-1"></a>      <span class="fu">sum</span>(numeric_values<span class="sc">^</span><span class="dv">2</span> <span class="sc">*</span> weight_values) <span class="sc">/</span> <span class="fu">sum</span>(weight_values) <span class="sc">-</span></span>
+<span id="cb23-65"><a href="#cb23-65" aria-hidden="true" tabindex="-1"></a>        weighted_mean<span class="sc">^</span><span class="dv">2</span></span>
+<span id="cb23-66"><a href="#cb23-66" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb23-67"><a href="#cb23-67" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb23-68"><a href="#cb23-68" aria-hidden="true" tabindex="-1"></a>    <span class="co"># save results for this variable</span></span>
+<span id="cb23-69"><a href="#cb23-69" aria-hidden="true" tabindex="-1"></a>    summary_results[[variable]] <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb23-70"><a href="#cb23-70" aria-hidden="true" tabindex="-1"></a>      <span class="at">mean =</span> weighted_mean,</span>
+<span id="cb23-71"><a href="#cb23-71" aria-hidden="true" tabindex="-1"></a>      <span class="at">sd =</span> weighted_sd</span>
+<span id="cb23-72"><a href="#cb23-72" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb23-73"><a href="#cb23-73" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb23-74"><a href="#cb23-74" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb23-75"><a href="#cb23-75" aria-hidden="true" tabindex="-1"></a>  <span class="co"># calculate weighted counts for categorical variables</span></span>
+<span id="cb23-76"><a href="#cb23-76" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (variable <span class="cf">in</span> categorical_variables) {</span>
+<span id="cb23-77"><a href="#cb23-77" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb23-78"><a href="#cb23-78" aria-hidden="true" tabindex="-1"></a>    <span class="co"># pull categorical values and population weights</span></span>
+<span id="cb23-79"><a href="#cb23-79" aria-hidden="true" tabindex="-1"></a>    category_values <span class="ot">&lt;-</span> object[[variable]]</span>
+<span id="cb23-80"><a href="#cb23-80" aria-hidden="true" tabindex="-1"></a>    weight_values <span class="ot">&lt;-</span> object<span class="sc">$</span>PWGTP</span>
+<span id="cb23-81"><a href="#cb23-81" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb23-82"><a href="#cb23-82" aria-hidden="true" tabindex="-1"></a>    <span class="co"># keep rows without missing values</span></span>
+<span id="cb23-83"><a href="#cb23-83" aria-hidden="true" tabindex="-1"></a>    valid_rows <span class="ot">&lt;-</span> <span class="sc">!</span><span class="fu">is.na</span>(category_values) <span class="sc">&amp;</span> <span class="sc">!</span><span class="fu">is.na</span>(weight_values)</span>
+<span id="cb23-84"><a href="#cb23-84" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb23-85"><a href="#cb23-85" aria-hidden="true" tabindex="-1"></a>    category_values <span class="ot">&lt;-</span> category_values[valid_rows]</span>
+<span id="cb23-86"><a href="#cb23-86" aria-hidden="true" tabindex="-1"></a>    weight_values <span class="ot">&lt;-</span> weight_values[valid_rows]</span>
+<span id="cb23-87"><a href="#cb23-87" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb23-88"><a href="#cb23-88" aria-hidden="true" tabindex="-1"></a>    <span class="co"># calculate weighted counts for each category</span></span>
+<span id="cb23-89"><a href="#cb23-89" aria-hidden="true" tabindex="-1"></a>    weighted_counts <span class="ot">&lt;-</span> <span class="fu">tapply</span>(</span>
+<span id="cb23-90"><a href="#cb23-90" aria-hidden="true" tabindex="-1"></a>      weight_values,</span>
+<span id="cb23-91"><a href="#cb23-91" aria-hidden="true" tabindex="-1"></a>      category_values,</span>
+<span id="cb23-92"><a href="#cb23-92" aria-hidden="true" tabindex="-1"></a>      sum</span>
+<span id="cb23-93"><a href="#cb23-93" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb23-94"><a href="#cb23-94" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb23-95"><a href="#cb23-95" aria-hidden="true" tabindex="-1"></a>    <span class="co"># save counts for this variable</span></span>
+<span id="cb23-96"><a href="#cb23-96" aria-hidden="true" tabindex="-1"></a>    summary_results[[variable]] <span class="ot">&lt;-</span> weighted_counts</span>
+<span id="cb23-97"><a href="#cb23-97" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb23-98"><a href="#cb23-98" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb23-99"><a href="#cb23-99" aria-hidden="true" tabindex="-1"></a>  <span class="co"># return named list of summary results</span></span>
+<span id="cb23-100"><a href="#cb23-100" aria-hidden="true" tabindex="-1"></a>  summary_results</span>
+<span id="cb23-101"><a href="#cb23-101" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb23-102"><a href="#cb23-102" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-103"><a href="#cb23-103" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(census_years_test)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$AGEP
+    mean       sd 
+39.76845 23.25635 
+
+$SEX
+    Male   Female 
+10697940 11183575 
+
+$state
+      37 
+21881515 
+
+$year
+    2023     2024 
+10835491 11046024 </code></pre>
+</div>
+</div>
+</section>
+<section id="graphical-summaries" class="level2">
+<h2 class="anchored" data-anchor-id="graphical-summaries">Graphical Summaries</h2>
+<p>Next, we create a custom plot() function for Census objects. The function will allow the user to specify one categorical variable and one numerical variable, and will create a weighted boxplot using <code>PWGTP</code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co"># custom plot function for census class</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>plot.census <span class="ot">&lt;-</span> <span class="cf">function</span>(</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  x,</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>  cat_var,</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>  num_var,</span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>  ...</span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>) {</span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># create weighted boxplot</span></span>
+<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(</span>
+<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>    x,</span>
+<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(</span>
+<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="fu">factor</span>(<span class="fu">get</span>(cat_var)),</span>
+<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="fu">get</span>(num_var),</span>
+<span id="cb25-15"><a href="#cb25-15" aria-hidden="true" tabindex="-1"></a>      <span class="at">weight =</span> PWGTP</span>
+<span id="cb25-16"><a href="#cb25-16" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb25-17"><a href="#cb25-17" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb25-18"><a href="#cb25-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_boxplot</span>() <span class="sc">+</span></span>
+<span id="cb25-19"><a href="#cb25-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> cat_var,</span>
+<span id="cb25-21"><a href="#cb25-21" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> num_var,</span>
+<span id="cb25-22"><a href="#cb25-22" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="fu">paste</span>(num_var, <span class="st">"by"</span>, cat_var)</span>
+<span id="cb25-23"><a href="#cb25-23" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb25-24"><a href="#cb25-24" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb25-25"><a href="#cb25-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-26"><a href="#cb25-26" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(</span>
+<span id="cb25-27"><a href="#cb25-27" aria-hidden="true" tabindex="-1"></a>  census_years_test,</span>
+<span id="cb25-28"><a href="#cb25-28" aria-hidden="true" tabindex="-1"></a>  <span class="at">cat_var =</span> <span class="st">"year"</span>,</span>
+<span id="cb25-29"><a href="#cb25-29" aria-hidden="true" tabindex="-1"></a>  <span class="at">num_var =</span> <span class="st">"AGEP"</span></span>
+<span id="cb25-30"><a href="#cb25-30" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Project1_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+
+
 </section>
 </section>
 
