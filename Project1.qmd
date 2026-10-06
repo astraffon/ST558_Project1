@@ -210,7 +210,7 @@ head(census_data_2024)
 
 ### Step 2: Use a helper function to create tibble
 
-Now we proceed with creating a helper function to automate the process we just completed manually. The process will do the following: 1) the API returns the data as raw content, 2) rawToChar() converts the raw content into readable JSON text, 3) fromJSON() converts the JSON text into an R object, 4) the first row is saved as the column names, and 5) the remaining data is converted into a tibble.
+Now we proceed with creating a helper function to automate the process we just completed manually. The process will do the following: 1) the API returns the data as raw content, 2) `rawToChar()` converts the raw content into readable JSON text, 3) `fromJSON()` converts the JSON text into an R object, 4) the first row is saved as the column names, and 5) the remaining data is converted into a tibble.
 
 ```{r}
 # helper function to convert API response into a tibble
@@ -235,6 +235,51 @@ census_tibble <- function(api_return) {
   # return tibble
   census_data
 }
+
+
+# helper function to convert Census time codes to midpoint times
+time_midpoint <- function(code, year, variable) {
+  
+  # pull the time values for the selected year and variable
+  time_values <-
+    variable_values[[as.character(year)]][[variable]][["item"]]
+  
+  # use the Census code to find the corresponding time range
+  time_range <- time_values[[as.character(code)]]
+  
+  # return NA if the time value is not applicable
+  if (is.null(time_range) || grepl("^N/A", time_range)) {
+    return(hms::as_hms(NA_real_))
+  }
+  
+  # remove periods from a.m. and p.m.
+  time_range <- gsub("\\.", "", time_range)
+  
+  # split the beginning and ending times
+  time_parts <- strsplit(time_range, " to ")[[1]]
+  
+  # convert the beginning and ending times
+  start_time <- parse_date_time(
+    time_parts[1],
+    orders = "I:M p"
+  )
+  
+  end_time <- parse_date_time(
+    time_parts[2],
+    orders = "I:M p"
+  )
+  
+  # calculate the midpoint of the time range
+  midpoint_seconds <- (
+    as.numeric(start_time) +
+    as.numeric(end_time)
+  ) / 2
+  
+  # return the midpoint in time format
+  hms::as_hms(
+    midpoint_seconds %% (24 * 60 * 60)
+  )
+}
 ```
 
 ### Test Section
@@ -244,6 +289,20 @@ census_data_test <- census_tibble(census_return_2024)
 
 # inspect tibble
 head(census_data_test)
+
+# test the time_midpoint() helper using a JWAP code
+time_midpoint(
+  code = "122",
+  year = 2024,
+  variable = "JWAP"
+)
+
+# test a missing / not-applicable time code... should return NA
+time_midpoint(
+  code = "0",
+  year = 2024,
+  variable = "JWAP"
+)
 
 ```
 
@@ -516,9 +575,49 @@ census_query <- function(
 ```{r}
 # test function using all default inputs
 census_query()
-```
-The default function`census_query()` returns 2024 Census data using the default numerical variables AGEP and PWGTP, categorical variable SEX, and the default State geography. The output also shows that the numerical variables have been converted to numeric values and SEX has been converted to a factor with the appropriate labels.
 
+# query 2023 PUMS data with a broader set of variables
+pums_2023 <- census_query(
+  year = 2023,
+  numerical_variables = c(
+    "AGEP", "GASP", "GRPIP", "JWMNP", "PWGTP"
+  ),
+  categorical_variables = c(
+    "FER", "HHL", "SCH", "SCHL", "SEX"
+  ),
+  geography = "State",
+  geography_value = "37"
+)
+
+# test main function using a time variable
+time_query_test <- census_query(
+  year = 2024,
+  numerical_variables = c("JWAP", "PWGTP"),
+  categorical_variables = "SEX",
+  geography = "State",
+  geography_value = "37"
+)
+
+# inspect returned data and variable types
+head(time_query_test)
+str(time_query_test)
+
+# keep the first 10,000 rows
+pums_sample_10000 <- head(pums_2023, 10000)
+
+# export sample to Excel
+writexl::write_xlsx(
+  pums_sample_10000,
+  "data/pums_sample_10000.xlsx"
+)
+
+
+```
+The default function `census_query()` returns 2024 Census data using the default numerical variables `AGEP` and `PWGTP`, categorical variable `SEX`, and the default State geography. The output also shows that the numerical variables have been converted to numeric values and `SEX` has been converted to a factor with the appropriate labels.
+
+In the second test, we query 2023 PUMS data with a broader set of variables. A 10,000-row sample of the returned data is available for inspection here:
+
+[Download the 10,000-row PUMS sample](data/pums_sample_10000.xlsx)
 
 ## Combining Years
 
@@ -777,3 +876,267 @@ plot(
 ```
 
 The plot compares the weighted distribution of age between the 2023 and 2024 Census data. Using year as the categorical variable demonstrates that the year variable can be treated as a category even though it is stored numerically in the tibble. The second plot uses SEX instead of year, showing that the same plotting function can be used with different categorical inputs.
+
+# Part 3: Investigation
+
+Now that we have created and tested the API, summary, and plotting functions, we can use them to investigate a couple of questions from the PUMS data. We will look at changes from 2021 through 2024 and use `PWGTP` so that the summaries and plots account for the population represented by each record.
+
+We will investigate two questions:
+
+1. How has travel time to work changed from 2021 through 2024 in New York, and does it differ between males and females?
+2. How have reported monthly household gas costs changed from 2021 through 2024 in Illinois?
+
+## Travel Time to Work in New York
+
+For the first investigation, we examine travel time to work in New York from 2021 through 2024 and compare the results for males and females. We use `JWMNP`, which measures travel time to work in minutes, along with `SEX` and `PWGTP`.
+```{r}
+# query New York travel time data for 2021 through 2024
+commute_data <- census_query_years(
+  years = c(2021, 2022, 2023, 2024),
+  numerical_variables = c("JWMNP", "PWGTP"),
+  categorical_variables = "SEX",
+  geography = "State",
+  geography_value = "36"
+)
+
+# inspect the returned data
+head(commute_data)
+nrow(commute_data)
+
+# remove records where travel time to work is not applicable
+commute_data_valid <- commute_data |>
+  filter(JWMNP > 0)
+
+# check the number of valid observations
+nrow(commute_data_valid)
+
+# export the data used for the analysis to Excel
+writexl::write_xlsx(commute_data_valid, "data/commute_data_valid.xlsx")
+```
+The original query returned 820,516 observations. Because `JWMNP` contains a value of 0 for records where travel time to work is not applicable, we remove those observations before calculating the commute-time summaries. After filtering, 319,167 sampled records remain for the analysis.
+
+Readers can inspect the data used for this investigation here: [Download the New York commute data](data/commute_data_valid.xlsx)
+
+Next, we use our custom `summary()` method to summarize travel time and examine the weighted counts by sex and year.
+```{r}
+# summarize valid travel time observations
+summary(
+  commute_data_valid,
+  numerical_variables = "JWMNP",
+  categorical_variables = c("SEX", "year")
+)
+```
+The weighted mean travel time across all four years is approximately 32.66 minutes, with a weighted standard deviation of approximately 25.74 minutes. The summary also provides weighted population counts by sex and year.
+
+We first use our custom `plot()` method to compare the weighted distribution of travel time between males and females.
+```{r}
+# use our custom plot method to compare travel time by sex
+plot(
+  commute_data_valid,
+  cat_var = "SEX",
+  num_var = "JWMNP"
+)
+```
+The boxplot shows substantial overlap in the travel-time distributions for males and females, although the typical travel time for males appears somewhat higher. Both groups also contain observations with considerably longer travel times.
+
+The boxplot compares males and females across all four years combined. To examine how the difference changes over time, we calculate the weighted mean travel time separately for males and females within each year and then illustrate with a time series using `ggplot()`.
+
+```{r}
+# create an empty data frame to store the results
+commute_results <- data.frame()
+
+# calculate summaries for each year
+for (current_year in c(2021, 2022, 2023, 2024)) {
+  
+  # calculate summaries separately for males and females
+  for (current_sex in levels(commute_data_valid$SEX)) {
+    
+    # keep observations for one year and one sex
+    commute_subset <- commute_data_valid |>
+      filter(
+        year == current_year,
+        SEX == current_sex
+      )
+    
+    # retain the census class
+    class(commute_subset) <- unique(
+      c("census", class(commute_subset))
+    )
+    
+    # use our custom summary() method
+    commute_summary <- summary(
+      commute_subset,
+      numerical_variables = "JWMNP",
+      categorical_variables = "SEX"
+    )
+    
+    # add the results to the results data frame
+    commute_results <- bind_rows(
+      commute_results,
+      data.frame(
+        year = current_year,
+        SEX = current_sex,
+        mean_travel_time =
+          unname(commute_summary$JWMNP["mean"]),
+        sd_travel_time =
+          unname(commute_summary$JWMNP["sd"])
+      )
+    )
+  }
+}
+
+# display the results
+commute_results
+```
+The results show that males had a higher weighted mean travel time than females in each year from 2021 through 2024. In 2021, the weighted mean travel time was approximately 32.75 minutes for males and 29.93 minutes for females. By 2024, these averages had increased to approximately 34.40 minutes and 32.03 minutes, for males and females, respectively. Although travel times did not increase every year, both groups show an overall increase between 2021 and 2024.
+
+Finally, we plot the yearly weighted means to make the change over time easier to compare.
+
+```{r}
+# plot weighted mean travel time by year and sex
+ggplot(
+  commute_results,
+  aes(
+    x = year,
+    y = mean_travel_time,
+    group = SEX,
+    color = SEX
+  )
+) +
+  geom_line() +
+  geom_point() +
+  labs(
+    x = "Year",
+    y = "Weighted Mean Travel Time (Minutes)",
+    title = "Travel Time to Work in New York by Sex, 2021-2024"
+  )
+```
+The line plot makes the pattern over time more apparent. Mean travel time increased substantially for both groups from 2021 to 2022, decreased slightly in 2023, and increased again in 2024. Males had a higher weighted mean travel time in every year, with the difference generally remaining between approximately two and three minutes.
+
+## Monthly Household Gas Costs in Illinois
+
+For the second investigation, we examine how reported monthly household gas costs changed in Illinois from 2021 through 2024. We use `GASP`, which measures monthly household gas cost in dollars, along with `PWGTP`.
+
+```{r}
+# query Illinois monthly gas cost data for 2021 through 2024
+gas_data <- census_query_years(
+  years = c(2021, 2022, 2023, 2024),
+  numerical_variables = c("GASP", "PWGTP"),
+  categorical_variables = "SEX",
+  geography = "State",
+  geography_value = "17"
+)
+
+# inspect the returned data
+head(gas_data)
+
+# inspect GASP values before calculating summaries
+summary(gas_data$GASP)
+
+# inspect the smallest values
+sort(unique(gas_data$GASP))[1:15]
+
+# count missing and zero values
+sum(is.na(gas_data$GASP))
+sum(gas_data$GASP == 0, na.rm = TRUE)
+
+# check total number of observations
+nrow(gas_data)
+
+# export the Illinois gas-cost data used for the analysis
+writexl::write_xlsx(
+  gas_data,
+  "data/gas_data_illinois.xlsx"
+)
+```
+The Illinois query returned 511,124 observations across the four survey years. Unlike the travel-time variable in the first investigation, `GASP` contains no missing or zero values, so no additional filtering is needed before calculating the gas-cost summaries.
+
+Readers can inspect the data used for this investigation here: [Download the Illinois household gas-cost data](data/gas_data_illinois.xlsx)
+
+
+```{r}
+# summarize monthly household gas cost and weighted counts by year
+summary(
+  gas_data,
+  numerical_variables = "GASP",
+  categorical_variables = "year"
+)
+```
+Using `PWGTP`, the weighted mean reported monthly household gas cost across the four years is approximately $97.02, 
+with a weighted standard deviation of approximately $163.50. The summary also provides the weighted population counts 
+represented by the sample in each year.
+
+```{r}
+# use our custom plot method to compare gas costs across years
+plot(
+  gas_data,
+  cat_var = "year",
+  num_var = "GASP"
+)
+```
+The boxplots show that reported monthly household gas costs are strongly right-skewed in each year, with a number of relatively high-cost observations. The center of the distribution appears higher in 2022 and 2023 than in 2021, while 2024 remains above the 2021 level. Because the distributions contain substantial outliers, the yearly weighted means will provide a clearer way to compare the overall change over time.
+
+
+```{r}
+# create an empty data frame to store yearly results
+gas_results <- data.frame()
+
+# calculate a gas-cost summary for each year
+for (current_year in c(2021, 2022, 2023, 2024)) {
+  
+  # keep observations for one year
+  gas_subset <- gas_data |>
+    filter(year == current_year)
+  
+  # retain the census class
+  class(gas_subset) <- unique(
+    c("census", class(gas_subset))
+  )
+  
+  # use our custom summary() method
+  gas_summary <- summary(
+    gas_subset,
+    numerical_variables = "GASP",
+    categorical_variables = "year"
+  )
+  
+  # add the result to the results data frame
+  gas_results <- bind_rows(
+    gas_results,
+    data.frame(
+      year = current_year,
+      mean_gas_cost =
+        unname(gas_summary$GASP["mean"]),
+      sd_gas_cost =
+        unname(gas_summary$GASP["sd"])
+    )
+  )
+}
+
+# display results
+gas_results
+```
+The yearly summaries show that the weighted mean reported monthly household gas cost increased from approximately $74.71 in 2021 to $113.67 in 2022. The mean then declined to approximately $105.38 in 2023 and $94.52 in 2024. Although reported monthly gas costs decreased after reaching their highest level in 2022, the 2024 weighted mean remained higher than the 2021 level.
+
+The relatively large standard deviations are also consistent with the wide spread and high-cost observations seen in the boxplots.
+
+```{r}
+# plot weighted mean monthly gas cost by year
+ggplot(
+  gas_results,
+  aes(
+    x = year,
+    y = mean_gas_cost
+  )
+) +
+  geom_line() +
+  geom_point() +
+  labs(
+    x = "Year",
+    y = "Weighted Mean Monthly Gas Cost ($)",
+    title = "Monthly Household Gas Costs in Illinois, 2021-2024"
+  )
+```
+The line plot makes the change over time easier to see. Reported monthly household gas costs increased considerably between 2021 and 2022, followed by declines in 2023 and 2024. Despite those declines, the weighted mean in 2024 remained above its 2021 level.
+
+**THE END**
